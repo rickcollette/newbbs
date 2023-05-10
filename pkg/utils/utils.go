@@ -2,9 +2,11 @@ package utils
 
 import (
 	"bufio"
+	"database/sql"
 	"fmt"
 	"net"
 	"os"
+
 	"github.com/iammegalith/tvbbs/pkg/users"
 )
 
@@ -25,11 +27,11 @@ func ShowText(conn net.Conn, path string) error {
 }
 
 // AnsiToggle toggles the ANSI mode for the user and sends a confirmation message to the connection
-func AnsiToggle(conn net.Conn, username string) {
-	err := users.ToggleAnsi(username)
+func AnsiToggle(db *sql.DB, username string) string {
+	err := users.ToggleAnsi(db, username)
 	if err != nil {
-		fmt.Fprintln(conn, "Error toggling ANSI mode.")
+		return "Error toggling ANSI mode."
 	} else {
-		fmt.Fprintln(conn, "ANSI mode toggled successfully.")
+		return "ANSI mode toggled successfully."
 	}
 }
