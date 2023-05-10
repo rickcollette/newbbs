@@ -16,8 +16,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize the database
-	db, err := database.NewDatabase(cfg.DBPath)
+	// Initialize the database 
+	db, err := database.NewDatabase(cfg.Paths.DBPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error initializing database: %v\n", err)
 		os.Exit(1)
