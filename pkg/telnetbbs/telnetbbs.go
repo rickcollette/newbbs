@@ -1,9 +1,7 @@
 package telnetbbs
 
 import (
-	"context"
 	"net"
-	"github.com/reiver/go-telnet"
 	"github.com/iammegalith/tvbbs/pkg/commands"
 	"github.com/iammegalith/tvbbs/pkg/users"
 	"github.com/iammegalith/tvbbs/pkg/utils"
