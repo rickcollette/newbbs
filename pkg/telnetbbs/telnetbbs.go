@@ -1,85 +1,74 @@
 package telnetbbs
 
 import (
+	"fmt"
 	"net"
-	"github.com/iammegalith/tvbbs/pkg/commands"
+	"time"
+
+	"github.com/iammegalith/tvbbs/pkg/database"
 	"github.com/iammegalith/tvbbs/pkg/users"
-	"github.com/iammegalith/tvbbs/pkg/utils"
 )
 
 type TelnetBBS struct {
-	addr string
+	address string
+	port    string
+	ln      net.Listener
+	db      *database.Database
 }
 
-func NewTelnetBBS(addr string) *TelnetBBS {
-	return &TelnetBBS{addr: addr}
+func New(address, port, dbPath string) (*TelnetBBS, error) {
+	db, err := database.NewDatabase(dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to the database: %v", err)
+	}
+
+	return &TelnetBBS{
+		address: address,
+		port:    port,
+		db:      db,
+	}, nil
 }
 
-func (bbs *TelnetBBS) Run() error {
-	listener, err := net.Listen("tcp", bbs.addr)
+func (t *TelnetBBS) Start() error {
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%s", t.address, t.port))
 	if err != nil {
 		return err
 	}
+	t.ln = ln
+
+	fmt.Printf("Telnet BBS started on %s:%s\n", t.address, t.port)
 
 	for {
-		conn, err := listener.Accept()
+		conn, err := t.ln.Accept()
 		if err != nil {
-			return err
+			fmt.Printf("Error accepting connection: %v\n", err)
+			continue
 		}
 
-		go bbs.handleConnection(conn)
+		go t.HandleConnection(conn)
 	}
 }
 
-func (bbs *TelnetBBS) handleConnection(conn net.Conn) {
+func (t *TelnetBBS) HandleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	// Show the pre-login text
-	utils.ShowText(conn, "ascii/prelog.txt")
+	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 
-	// Perform the user login or registration process
-	username, loggedIn := users.Login(conn)
-	if !loggedIn {
-		utils.ShowText(conn, "ansi/later.txt")
+	_, err := users.Login(conn, t.db.conn)
+	if err != nil {
+		fmt.Printf("User login or registration failed: %v\n", err)
 		return
 	}
 
-	// Show the main menu and handle user commands
-	for {
-		ansiEnabled := false // Check whether the user has ANSI enabled
+	// Continue with your main application logic here
+}
 
-		// Show the main menu
-		if ansiEnabled {
-			utils.ShowText(conn, "ansi/mainmenu.ans")
-		} else {
-			utils.ShowText(conn, "ascii/mainmenu.asc")
-		}
+func (t *TelnetBBS) Stop() {
+	if t.ln != nil {
+		t.ln.Close()
+	}
 
-		// Read a single character for the menu option
-		menuOption := utils.ReadMenuOption(conn)
-
-		// Execute the corresponding command or menu based on the menu option
-		switch menuOption {
-		case 'A', 'a':
-			utils.AnsiToggle(username)
-		case 'B', 'b':
-			utils.Menu(conn, "bulletins")
-		case 'C', 'c':
-			commands.MultiUserChat(conn)
-		case 'D', 'd':
-			utils.Menu(conn, "doors")
-		case 'G', 'g':
-			if utils.GoodBye(conn) {
-				return
-			}
-		case 'I', 'i':
-			if ansiEnabled {
-				utils.ShowText(conn, "ansi/systeminfo.ans")
-			} else {
-				utils.ShowText(conn, "ascii/systeminfo.asc")
-			}
-		default:
-			conn.Write([]byte("Invalid option. Please try again.\n"))
-		}
+	if t.db != nil {
+		t.db.Close()
 	}
 }
