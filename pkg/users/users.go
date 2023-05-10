@@ -1,8 +1,8 @@
 package users
 
 import (
-	"example.com/bbs/pkg/database"
-	"example.com/bbs/pkg/utils"
+	"github.com/iammegalith/tvbbs/pkg/database"
+	"github.com/iammegalith/tvbbs/pkg/utils"
 	"fmt"
 )
 
